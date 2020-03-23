@@ -19,32 +19,35 @@ virtualmachines=`find $configdir -type f -name "*.conf" |cut -d "/" -f 6|cut -d 
 backupallmachines=`grep '\-\-all' $backupconfig|wc -l`
 
 # Check every VM for configured backup
-if [ "$backupallmachines" = "0" ]; then
-for i in $virtualmachines
-do
-    backupenabled=1
+if [ "$backupallmachines" -eq "0" ]; then
+    for i in $virtualmachines
+    do
+        backupenabled=1
 
-    checkbackup=`grep $i $backupconfig |sed 's/  */ /g'|cut -d "-" -f 1|cut -d " " -f 8-|tr -d "\n"`
-    if [ "$checkbackup" = "" ];then
-        # echo "VM $i is not configured for backups."
-        backupenabled=0
-    fi
+        checkbackup=`grep $i $backupconfig |sed 's/  */ /g'|cut -d "-" -f 1|cut -d " " -f 8-|tr -d "\n"`
+        if [ "$checkbackup" = "" ];then
+            # echo "VM $i is not configured for backups."
+            backupenabled=0
+        fi
 
-    checkbackupenabled=`grep $i $backupconfig | grep "#vzdump" | sed 's/  */ /g'|cut -d "-" -f 1|cut -d " " -f 8-|tr -d "\n"`
-    if ! [ "$checkbackupenabled" = "" ];then
-        # echo "Backup for VM $i is configured, but disabled."
-        backupenabled=0
-    fi
+        checkbackupenabled=`grep $i $backupconfig | grep "#vzdump" | sed 's/  */ /g'|cut -d "-" -f 1|cut -d " " -f 8-|tr -d "\n"`
+        if ! [ "$checkbackupenabled" = "" ];then
+            # echo "Backup for VM $i is configured, but disabled."
+            backupenabled=0
+        fi
 
-ARR+=("{\"{#VM_NUMBER}\":\""$i"\", \"{#BACKUP_STATUS}\":\""$backupenabled"\"}")
+        # Calculate Trigger
+        trigger=$(grep $i $backupconfig | cut -d " " -f 5 | tr -d '\n' | awk -F '[0-9]' '{print NF-1}' | awk '{print 8 - $1}')
 
-done
-SAVE_IFS="$IFS"
-### separator
-IFS=","
-### bash join array
-JOINED_LIST="${ARR[*]}"
-IFS="$SAVE_IFS"
+        ARR+=("{\"{#VM_NUMBER}\":\""$i"\", \"{#BACKUP_STATUS}\":\""$backupenabled"\", \"{#TRIGGER_DAYS}\":\""$trigger"\"}")
 
-echo '{ "data": [' $JOINED_LIST ']}'
+    done
+    SAVE_IFS="$IFS"
+    ### separator
+    IFS=","
+    ### bash join array
+    JOINED_LIST="${ARR[*]}"
+    IFS="$SAVE_IFS"
+
+    echo '{ "data": [' $JOINED_LIST ']}'
 fi

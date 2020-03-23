@@ -1,21 +1,38 @@
-﻿0. Setup backup procedure on needed Proxmox server in web interface.
-1. On needed server copy files from "scripts" folder to /etc/zabbix/scripts/
-2. Make them executable, chmod a+rx script_name
-3. Add to /etc/zabbix/zabbix_agentd.conf:
-UserParameter=proxmox-vms-discovery, sudo /etc/zabbix/scripts/proxmox-vms-discovery
-UserParameter=proxmox-vms-backup-status[*], sudo /etc/zabbix/scripts/proxmox-vms-backup-status $1 $2
-4. Restart Zabbix agent.
-5. Add to /etc/sudoers:
-zabbix ALL=(ALL) NOPASSWD: /etc/zabbix/scripts/proxmox-vms-discovery
-zabbix ALL=(ALL) NOPASSWD: /etc/zabbix/scripts/proxmox-vms-backup-status
-6. Import template to Zabbix Server and apply to needed host
-7. Change macros {$BACKUP_PERIOD} value in template as you wish. Default - 7 days
+# Zabbix Template: Proxmox VMs Backup Status
 
-Value mapping that used in template. On Zabbix Server: Administration -> General -> Value mapping
-Name: 		Proxmox VMs backup return codes
-Value map: 	0 ⇒ Invalid VM number, or backup for VM is not configured.
-		1 ⇒ Backup directory for VM does not exists.
-		2 ⇒ VM has no backup file.
-		3 ⇒ VM backup is older than N day(s).
-		4 ⇒ VM backup finished with errors. Please, check logs.
-		7 ⇒ VM backup is OK, no errors found.
+*This is a "fork" from [MR_Andrew, 2018](https://share.zabbix.com/virtualization/proxmox/proxmox-vms-backup-status-template)*
+
+This template will help you check the result of scheduled build-in backups in Proxmox. Based on 2 scripts: discovery script that will find VM numbers and check if backup enabled; monitoring script that will do all other staff.
+
+You can make any changes in template as you wish.
+
+![Backup is older than](screenshots/oldbackup.png)
+
+## Installation
+
+1. Setup backup procedure on needed Proxmox server in web interface.
+2. Copy all **scripts** to `/etc/zabbix/scripts/` and make them executable
+
+   ```bash
+   mkdir -p /etc/zabbix/scripts
+   cd /etc/zabbix/scripts
+   chmod +x proxmox*
+   ```
+   
+3. Copy **userparameter_proxmox.conf** to `/etc/zabbix/zabbix_agentd.d`
+
+4. Add the following to /etc/sudoers:
+
+	```
+	zabbix ALL=(ALL) NOPASSWD: /etc/zabbix/scripts/proxmox-vms-discovery
+	zabbix ALL=(ALL) NOPASSWD: /etc/zabbix/scripts/proxmox-vms-backup-status
+	```
+	
+	Verify sudo file with:
+	
+	```bash
+	visudo -c
+	```
+
+5. Import template to Zabbix Server and apply to needed host
+6. Restart the Zabbix agent.
